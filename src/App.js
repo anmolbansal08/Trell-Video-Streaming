@@ -38,13 +38,65 @@ const initialState = {
 function App() {
   const [user, setUser] = React.useState(null);
   const [inputValue, setInput] = React.useState("");
-
+  const [state, dispatch] = React.useReducer(reducer, initialState);
   React.useEffect(() => {
     Auth.currentAuthenticatedUser()
       .then((currentUser) => setUser(currentUser))
       .catch((err) => console.log({ err }));
+    fetchComments();
+    subscribe();
   }, []);
 
+  function subscribe() {
+    API.graphql({
+      query: OnCreateComment,
+    }).subscribe({
+      next: async (commentData) => {
+        console.log({ commentData });
+        const {
+          value: { data },
+        } = commentData;
+        try {
+          const user = await Auth.currentAuthenticatedUser();
+          console.log({ user });
+          if (user.username === data.onCreateComment.owner) {
+            return;
+          }
+          dispatch({ type: "ADD_COMMENT", comment: data.onCreateComment });
+        } catch (err) {
+          console.log("err: ", err);
+          dispatch({ type: "ADD_COMMENT", comment: data.onCreateComment });
+        }
+      },
+    });
+  }
+
+  //fetch
+  async function fetchComments() {
+    const commentData = await API.graphql({
+      query: ListComments,
+    });
+    dispatch({
+      type: "SET_COMMENTS",
+      comments: commentData.data.listComments.items,
+    });
+  }
+  async function createComment() {
+    if (!inputValue) return;
+    const message = inputValue;
+    setInput("");
+    dispatch({
+      type: "ADD_COMMENT",
+      comment: { message, owner: user.username },
+    });
+    await API.graphql({
+      query: CreateComment,
+      variables: {
+        input: { message },
+      },
+      authMode: "AMAZON_COGNITO_USER_POOLS",
+    });
+  }
   function onChange(e) {
     e.persist();
     setInput(e.target.value);
@@ -63,6 +115,7 @@ function App() {
                 onChange={onChange}
                 placeholder="comment"
               />
+              <button onClick={createComment}>Create Comment</button>
             </div>
           )}
           {state.comments.map((comment, index) => (
