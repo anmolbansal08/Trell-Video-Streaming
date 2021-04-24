@@ -10,7 +10,7 @@ import { listComments as ListComments } from "./graphql/queries";
 import { onCreateComment as OnCreateComment } from "./graphql/subscriptions";
 
 const streamUrl =
-  "https://5ab61782dc20.us-east-1.playback.live-video.net/api/video/v1/us-east-1.557458351015.channel.l6pYjS72ScW9.m3u8";
+  "https://6e7195379fb1.us-east-1.playback.live-video.net/api/video/v1/us-east-1.501296098176.channel.0DVDxjIjpBkm.m3u8";
 
 function Router() {
   return (
@@ -35,6 +35,23 @@ const initialState = {
   comments: [],
 };
 
+function reducer(state, action) {
+  switch (action.type) {
+    case "SET_COMMENTS":
+      return {
+        ...state,
+        comments: action.comments,
+      };
+    case "ADD_COMMENT":
+      return {
+        ...state,
+        comments: [...state.comments, action.comment],
+      };
+    default:
+      return state;
+  }
+}
+
 function App() {
   const [user, setUser] = React.useState(null);
   const [inputValue, setInput] = React.useState("");
@@ -46,7 +63,6 @@ function App() {
     fetchComments();
     subscribe();
   }, []);
-
   function subscribe() {
     API.graphql({
       query: OnCreateComment,
@@ -70,8 +86,6 @@ function App() {
       },
     });
   }
-
-  //fetch
   async function fetchComments() {
     const commentData = await API.graphql({
       query: ListComments,
